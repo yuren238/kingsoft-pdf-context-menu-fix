@@ -1,4 +1,4 @@
-﻿# 金山PDF 11.x 右键菜单消失修复补丁
+# 金山PDF 11.x 右键菜单消失修复补丁
 
 > 修复 Windows 11 24H2 / 25H2 上「金山PDF」（11.8.0.8845 独立版，即"金山PDF专业版/教育版"）右键菜单消失的问题。
 > 只需补一条机器级 COM 注册，**原版菜单（含拆分合并、格式转换等全部官方子菜单）即可完整恢复**。
@@ -104,13 +104,13 @@ A: 如果金山官方在新版本中改用机器级注册（或微软调整策�
 升级步骤概要：
 
 1. 从一台装有新版金山PDF/WPS 的电脑取两个东西：
-   - `...\office6\kwpspdfshellext64.dll`
-   - `%APPDATA%\kingsoft\wpsufd` 整个目录
+   - `...\office6\kwpspdfshellext64.dll`（12.x 新扩展 DLL）
+   - 该机器 `%APPDATA%\kingsoft\wpsufd\addons\pool\win-i386\kwpsshellextcfg_3.1.0.1`
+     **这一个子目录**（99 个文件 / 134KB，含 menu_2.xml + zh_CN 翻译表 + 图标）
+     —— 其余约 200MB 插件池内容与右键菜单显示无关，可全部省略
 2. 先运行本仓库安装补丁（HKLM CLSID 修复必须就位）
-3. 关闭 explorer → 用新 DLL 覆盖旧 DLL → wpsufd 镜像到 `%APPDATA%\kingsoft\` 下
-   > 💡 实测仅需 wpsufd 中 `addons\pool\win-i386\kwpsshellextcfg_3.1.0.1` 一个子目录
-   > （99 个文件 / 134KB，含 menu_2.xml + zh_CN 翻译表 + 图标），
-   > 其余约 200MB 的插件池内容与右键菜单显示无关，可全部省略。
+3. 关闭 explorer → 用新 DLL 覆盖旧 DLL → 把 `kwpsshellextcfg_3.1.0.1` 按**原相对路径**
+   放到本机 `%APPDATA%\kingsoft\wpsufd\addons\pool\win-i386\` 下
 4. 重启 explorer → 中文完整原版菜单
 
 > 因涉及金山版权文件，本仓库不直接分发上述二进制与资源。
