@@ -88,29 +88,28 @@ A: 如果金山官方在新版本中改用机器级注册（或微软调整策�
 
 ## 进阶：恢复的菜单显示为英文内部名？
 
-11.8 版扩展 DLL 的菜单标签是内嵌英文 ID（如 `EditWithWPSPDFPro`、`pdfsplitmerge`），
-且经内核文件 IO 追踪（WPR FileIO，119 万事件采样）证实：**其构建菜单时不读取任何外部资源文件**。
-中文显示名来自 **新版 12.x 扩展** 的 `menu_2.xml` + `mui\zh_CN\tr.xml` 资源体系。
+11.8 版扩展 DLL 默认显示内嵌英文 ID（如 `EditWithWPSPDFPro`、`pdfsplitmerge`）。
+中文显示名来自扩展的资源体系：升级包 `kwpsshellextcfg` 内的
+`shellext\menu_2.xml` + `shellext\mui\zh_CN\tr.xml` + 图标。
 
-**已验证可行的"混搭"组合**（本补丁作者环境实测）：
+**实测结论（2026-08 重装对照）：不需要替换 DLL。**
 
-```
-12.6.0.22857 的 kwpspdfshellext64.dll   ← 提供中文显示与全部功能调度
-11.8.0.8845 的产品程序                   ← 实际执行功能（兼容性已验证）
-%APPDATA%\kingsoft\wpsufd 资源树         ← 菜单定义/翻译/图标
-+ 本仓库安装补丁(HKLM CLSID)             ← 让 24H2/25H2 愿意加载
-```
+金山PDF重装回 11.8 后，只要 `%APPDATA%\kingsoft\wpsufd` 资源树还在
+（卸载/重装不会清除 Roaming 目录），11.8 原版 DLL 就直接显示完整中文菜单——
+起作用的是资源树本身，与本机 `office6` 里的 DLL 版本无关。
 
-升级步骤概要：
+> 本节早期版本曾写"经 WPR 文件 IO 追踪证实 11.8 构建菜单不读取任何外部资源、
+> 必须换用 12.x 扩展 DLL"，该结论已被上述重装对照实验证伪，特此更正。
 
-1. 从一台装有新版金山PDF/WPS 的电脑取两个东西：
-   - `...\office6\kwpspdfshellext64.dll`（12.x 新扩展 DLL）
-   - 该机器 `%APPDATA%\kingsoft\wpsufd\addons\pool\win-i386\kwpsshellextcfg_3.1.0.1`
-     **这一个子目录**（99 个文件 / 134KB，含 menu_2.xml + zh_CN 翻译表 + 图标）
-     —— 其余约 200MB 插件池内容与右键菜单显示无关，可全部省略
+操作步骤概要：
+
+1. 从一台装有新版金山PDF/WPS 的电脑取一个东西：
+   该机器 `%APPDATA%\kingsoft\wpsufd\addons\pool\win-i386\kwpsshellextcfg_3.1.0.1`
+   **这一个子目录**（99 个文件 / 134KB，含 menu_2.xml + zh_CN 翻译表 + 图标）
+   —— 其余约 200MB 插件池内容与右键菜单显示无关，可全部省略
 2. 先运行本仓库安装补丁（HKLM CLSID 修复必须就位）
-3. 关闭 explorer → 用新 DLL 覆盖旧 DLL → 把 `kwpsshellextcfg_3.1.0.1` 按**原相对路径**
-   放到本机 `%APPDATA%\kingsoft\wpsufd\addons\pool\win-i386\` 下
+3. 把该子目录按**原相对路径**放到本机
+   `%APPDATA%\kingsoft\wpsufd\addons\pool\win-i386\` 下
 4. 重启 explorer → 中文完整原版菜单
 
 > 因涉及金山版权文件，本仓库不直接分发上述二进制与资源。
