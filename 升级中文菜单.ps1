@@ -1,10 +1,11 @@
 ﻿# ============================================================
 #  进阶: 将右键菜单升级为中文完整版 (v4 防占用版)
-#  自动使用同目录「中文升级源文件」内的 DLL 与资源树
+#  自动查找同目录 DLL 与资源树(同级目录优先, 回退「中文升级源文件」子目录)
 #  前提: 已运行过「安装补丁.cmd」(HKLM CLSID修复就位)
 #  v4改进: 全盘扫描找出占用DLL的真实进程并结束 /
 #          改名腾位兜底(Windows允许重命名被占用的DLL) /
-#          保留v3的重试+SHA256校验+出错不闪退
+#          保留v3的重试+SHA256校验+出错不闪退 /
+#          源文件路径灵活: 同级目录或子目录均可, wpsufd缺失时跳过不报错
 # ============================================================
 $ErrorActionPreference = 'Stop'
 function Pause-Exit([int]$c) { Read-Host '回车退出' | Out-Null; exit $c }
@@ -28,11 +29,26 @@ try {
     exit
   }
   $base = Split-Path $PSCommandPath
-  $dllSource = Join-Path $base '中文升级源文件\kwpspdfshellext64.dll'
-  $resSource = Join-Path $base '中文升级源文件\wpsufd'
 
-  if (-not (Test-Path -LiteralPath $dllSource)) { Write-Host '[错误] 缺少 中文升级源文件\kwpspdfshellext64.dll' -ForegroundColor Red; Pause-Exit 1 }
-  if (-not (Test-Path -LiteralPath $resSource)) { Write-Host '[错误] 缺少 中文升级源文件\wpsufd' -ForegroundColor Red; Pause-Exit 1 }
+  # --- 定位源DLL: 优先脚本同级目录, 回退到「中文升级源文件」子目录 ---
+  $dllSource = $null
+  foreach ($cand in @(
+    (Join-Path $base 'kwpspdfshellext64.dll'),
+    (Join-Path $base '中文升级源文件\kwpspdfshellext64.dll')
+  )) {
+    if (Test-Path -LiteralPath $cand) { $dllSource = $cand; break }
+  }
+  if (-not $dllSource) { Write-Host '[错误] 未找到 kwpspdfshellext64.dll, 请放在脚本同级目录或「中文升级源文件」子目录中' -ForegroundColor Red; Pause-Exit 1 }
+
+  # --- 定位资源树: 同级目录优先, 子目录回退, 找不到则跳过(仅替换DLL也可用) ---
+  $resSource = $null
+  foreach ($cand in @(
+    (Join-Path $base 'wpsufd'),
+    (Join-Path $base '中文升级源文件\wpsufd')
+  )) {
+    if (Test-Path -LiteralPath $cand) { $resSource = $cand; break }
+  }
+  if (-not $resSource) { Write-Host '[提示] 未找到 wpsufd 资源目录, 将跳过资源树部署(仅替换DLL)' -ForegroundColor Yellow }
 
   # --- 定位安装目录: 优先读HKLM CLSID(最可靠), 失败再扫描 ---
   $o6 = $null
@@ -115,10 +131,12 @@ try {
   Write-Host ('[OK] 扩展DLL已更新为: ' + (Get-Item -LiteralPath $dllTarget).VersionInfo.FileVersion)
 
   # --- 资源树: 复制"内容"而非整个文件夹(避免嵌套成wpsufd\wpsufd) ---
-  $resRoot = Join-Path $env:APPDATA 'kingsoft\wpsufd'
-  New-Item -ItemType Directory -Force -Path $resRoot | Out-Null
-  Copy-Item -Path (Join-Path $resSource '*') -Destination $resRoot -Recurse -Force
-  Write-Host '[OK] 中文资源树已部署'
+  if ($resSource) {
+    $resRoot = Join-Path $env:APPDATA 'kingsoft\wpsufd'
+    New-Item -ItemType Directory -Force -Path $resRoot | Out-Null
+    Copy-Item -Path (Join-Path $resSource '*') -Destination $resRoot -Recurse -Force
+    Write-Host '[OK] 中文资源树已部署'
+  }
 
   Start-Process explorer.exe
   Start-Sleep 2
